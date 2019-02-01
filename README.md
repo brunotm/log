@@ -6,7 +6,7 @@
 # log
 
 A simple, leveled, fast, zero allocation, json structured logging package for Go.
-Designed to make logging on the hot path gratis, dependency free and my life easier.
+Designed to make logging on the hot path dirt cheap, dependency free and my life easier.
 
 
 ## Usage
