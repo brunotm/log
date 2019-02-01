@@ -30,7 +30,7 @@ func TestLogEntry(t *testing.T) {
 	config.Level = DEBUG
 	l := New(os.Stdout, config)
 
-	l.Hooks(func(e *Entry) {
+	l.Hooks(func(e Entry) {
 		switch e.Level() {
 		case DEBUG:
 			if 0 != bytes.Compare(
@@ -69,7 +69,7 @@ func TestLogEntry(t *testing.T) {
 
 	l.Error("error message").
 		String("string value", "text").
-		Int("int value", 8).Int("int value", 8).Log()
+		Int("int value", 8).Log()
 
 }
 
@@ -80,7 +80,7 @@ func TestLogObject(t *testing.T) {
 	config.Level = DEBUG
 	l := New(os.Stdout, config)
 
-	l.Hooks(func(e *Entry) {
+	l.Hooks(func(e Entry) {
 		if 0 != bytes.Compare([]byte(`{"level":"error","message":"error message","string value":"text","int value":8,"object":{"user":"userA","id":72386784}}`), e.Bytes()) {
 			t.Fatal("error logging object")
 		}
@@ -88,9 +88,30 @@ func TestLogObject(t *testing.T) {
 
 	l.Error("error message").
 		String("string value", "text").
-		Int("int value", 8).Int("int value", 8).
-		Object("object", func(e *Entry) {
+		Int("int value", 8).
+		Object("object", func(e Entry) {
 			e.String("user", "userA").Int("id", 72386784)
+		}).Log()
+}
+
+func TestLogArray(t *testing.T) {
+	config := DefaultConfig
+	config.EnableTime = false
+	config.EnableCaller = false
+	config.Level = DEBUG
+	l := New(os.Stdout, config)
+
+	l.Hooks(func(e Entry) {
+		if 0 != bytes.Compare([]byte(`{"level":"error","message":"error message","string value":"text","int value":8,"array":["userA",72386784]}`), e.Bytes()) {
+			t.Fatal("error logging object")
+		}
+	})
+
+	l.Error("error message").
+		String("string value", "text").
+		Int("int value", 8).
+		Array("array", func(a Array) {
+			a.AppendString("userA").AppendInt(72386784)
 		}).Log()
 }
 
