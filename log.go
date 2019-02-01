@@ -36,7 +36,7 @@ const (
 )
 
 var (
-	entryPool *sync.Pool
+	encoderPool *sync.Pool
 
 	// DefaultConfig for logger
 	DefaultConfig = Config{
@@ -51,17 +51,17 @@ var (
 )
 
 func init() {
-	entryPool = &sync.Pool{
-		New: newEntry,
+	encoderPool = &sync.Pool{
+		New: newEncoder,
 	}
 
 	for x := 0; x < 32; x++ {
-		entryPool.Put(newEntry())
+		encoderPool.Put(newEncoder())
 	}
 }
 
-func newEntry() interface{} {
-	return &Entry{l: nil, data: make([]byte, 0, entrySize)}
+func newEncoder() interface{} {
+	return &encoder{data: make([]byte, 0, entrySize), index: -1}
 }
 
 // Config type for logger
@@ -79,8 +79,8 @@ type Config struct {
 type Logger struct {
 	config Config
 	writer io.Writer
-	hooks  []func(*Entry)
-	with   []func(*Entry)
+	hooks  []func(Entry)
+	with   []func(Entry)
 }
 
 // New creates a new logger with the give config and writer.
@@ -100,7 +100,7 @@ func New(writer io.Writer, config Config) (logger *Logger) {
 
 // With register functions to apply context to the log entries.
 // With functions are cumulative and applied before all other log data.
-func (l *Logger) With(f ...func(*Entry)) (logger *Logger) {
+func (l *Logger) With(f ...func(Entry)) (logger *Logger) {
 	return &Logger{
 		config: l.config,
 		writer: l.writer,
@@ -112,18 +112,21 @@ func (l *Logger) With(f ...func(*Entry)) (logger *Logger) {
 // Hooks register funtions to the current logger that are applied
 // after the entry is written. Useful for sending log data to log aggregation tools
 // or capturing metrics.
-func (l *Logger) Hooks(f ...func(*Entry)) {
+func (l *Logger) Hooks(f ...func(Entry)) {
 	l.hooks = append(l.hooks, f...)
 }
 
 // entry creates a new log entry with the specified level to be manipulated directly
-func (l *Logger) entry(level Level) (entry *Entry) {
+func (l *Logger) entry(level Level) (entry Entry) {
 
 	// Only initialize Entry if on or above the logger Level
 	if level >= l.config.Level {
 
-		entry = entryPool.Get().(*Entry)
-		entry.init(l, level)
+		enc := encoderPool.Get().(*encoder)
+		entry = Entry{}
+		entry.enc = enc
+		entry.l = l
+		entry.init(level)
 
 		for i := 0; i < len(l.with); i++ {
 			l.with[i](entry)
@@ -135,35 +138,35 @@ func (l *Logger) entry(level Level) (entry *Entry) {
 }
 
 // Debug creates a new log entry with the given message.
-func (l *Logger) Debug(message string) (entry *Entry) {
+func (l *Logger) Debug(message string) (entry Entry) {
 	entry = l.entry(DEBUG)
 	entry.String(l.config.MessageField, message)
 	return entry
 }
 
 // Info creates a new log entry with the given message.
-func (l *Logger) Info(message string) (entry *Entry) {
+func (l *Logger) Info(message string) (entry Entry) {
 	entry = l.entry(INFO)
 	entry.String(l.config.MessageField, message)
 	return entry
 }
 
 // Warn creates a new log entry with the given message.
-func (l *Logger) Warn(message string) (entry *Entry) {
+func (l *Logger) Warn(message string) (entry Entry) {
 	entry = l.entry(WARN)
 	entry.String(l.config.MessageField, message)
 	return entry
 }
 
 // Error creates a new log entry with the given message.
-func (l *Logger) Error(message string) (entry *Entry) {
+func (l *Logger) Error(message string) (entry Entry) {
 	entry = l.entry(ERROR)
 	entry.String(l.config.MessageField, message)
 	return entry
 }
 
-func (l *Logger) write(entry *Entry) {
-	l.writer.Write(append(entry.data, '\n'))
+func (l *Logger) write(entry Entry) {
+	l.writer.Write(append(entry.enc.data, '\n'))
 
 	for i := 0; i < len(l.hooks); i++ {
 		l.hooks[i](entry)
@@ -172,7 +175,7 @@ func (l *Logger) write(entry *Entry) {
 	l.discard(entry)
 }
 
-func (l *Logger) discard(entry *Entry) {
-	entry.reset()
-	entryPool.Put(entry)
+func (l *Logger) discard(entry Entry) {
+	entry.enc.reset()
+	encoderPool.Put(entry.enc)
 }

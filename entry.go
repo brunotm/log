@@ -29,255 +29,151 @@ const (
 
 // Entry is a structured log entry. A entry is not safe for concurrent use.
 // A entry must be logged by calling Log(), and cannot be reused after.
+// Repeated keys will be ignored.
 type Entry struct {
-	keys  []string
-	data  []byte
+	enc   *encoder
 	l     *Logger
-	done  bool
 	level Level
 }
 
-func (e *Entry) open() {
-	e.data = append(e.data, '{')
-}
-
-func (e *Entry) close() {
-	e.data = append(e.data, '}')
-}
-
-func (e *Entry) reset() {
+func (e Entry) reset() {
 	e.l = nil
-	e.done = false
-	e.data = e.data[:0]
-	e.keys = e.keys[:0]
+	e.enc.reset()
 }
 
 // Log logs the current entry. An entry must not be used after calling Log.
-func (e *Entry) Log() {
-	if e == nil || e.done {
-		return
+func (e Entry) Log() {
+	if e.enc != nil {
+		e.enc.closeObject()
+		e.l.write(e)
 	}
-	e.close()
-	e.done = true
-	e.l.write(e)
 }
 
 // Discard the current entry without logging it.
-func (e *Entry) discard() {
-	if e == nil || e.done {
-		return
+func (e Entry) discard() {
+	if e.enc != nil {
+		e.l.discard(e)
 	}
-	e.l.discard(e)
 }
 
 // Level returns the log level of current entry.
-func (e *Entry) Level() (level Level) {
+func (e Entry) Level() (level Level) {
 	return e.level
 }
 
 // Bytes return the current entry bytes. This is intended to be used in hooks
 // That will be applied after calling Log().
 // The retuned []byte is not a copy and must not be modified directly.
-func (e *Entry) Bytes() (data []byte) {
-	return e.data
+func (e Entry) Bytes() (data []byte) {
+	return e.enc.data
 }
 
 // Error adds the given error key/value to the log entry
-func (e *Entry) Error(key string, err error) (entry *Entry) {
-	e.String(key, err.Error())
+func (e Entry) Error(key string, err error) (entry Entry) {
+	if e.enc != nil {
+		e.enc.addKey(key)
+		e.enc.AppendString(err.Error())
+	}
 	return e
 }
 
 // Bool adds the given bool key/value to the log entry
-func (e *Entry) Bool(key string, value bool) (entry *Entry) {
-	if e == nil || e.done {
-		return nil
+func (e Entry) Bool(key string, value bool) (entry Entry) {
+	if e.enc != nil {
+		e.enc.addKey(key)
+		e.enc.AppendBool(value)
 	}
-
-	if e.hasKey(key) {
-		return e
-	}
-
-	e.addKey(key)
-	e.data = strconv.AppendBool(e.data, value)
 	return e
 }
 
 // Float adds the given float key/value to the log entry
-func (e *Entry) Float(key string, value float64) (entry *Entry) {
-	if e == nil || e.done {
-		return nil
+func (e Entry) Float(key string, value float64) (entry Entry) {
+	if e.enc != nil {
+		e.enc.addKey(key)
+		e.enc.AppendFloat(value)
 	}
-
-	if e.hasKey(key) {
-		return e
-	}
-
-	e.addKey(key)
-	e.data = strconv.AppendFloat(e.data, value, 'f', -1, 64)
 	return e
 }
 
 // Int adds the given int key/value to the log entry
-func (e *Entry) Int(key string, value int64) (entry *Entry) {
-	if e == nil || e.done {
-		return nil
+func (e Entry) Int(key string, value int64) (entry Entry) {
+	if e.enc != nil {
+		e.enc.addKey(key)
+		e.enc.AppendInt(value)
 	}
-
-	if e.hasKey(key) {
-		return e
-	}
-
-	e.addKey(key)
-	e.data = strconv.AppendInt(e.data, value, 10)
 	return e
 }
 
 // Uint adds the given uint key/value to the log entry
-func (e *Entry) Uint(key string, value uint64) (entry *Entry) {
-	if e == nil || e.done {
-		return nil
+func (e Entry) Uint(key string, value uint64) (entry Entry) {
+	if e.enc != nil {
+		e.enc.addKey(key)
+		e.enc.AppendUint(value)
 	}
-
-	if e.hasKey(key) {
-		return e
-	}
-
-	e.addKey(key)
-	e.data = strconv.AppendUint(e.data, value, 10)
 	return e
 }
 
 // String adds the given string key/value to the log entry
-func (e *Entry) String(key string, value string) (entry *Entry) {
-	if e == nil || e.done {
-		return nil
-	}
-
-	if e.hasKey(key) {
-		return e
-	}
-
-	e.addKey(key)
-	e.writeString(value)
-	return e
-}
-
-// Object creates a nested object within the given log entry.
-// Calling Log() on the object Entry is not allowed.
-func (e *Entry) Object(key string, fn func(*Entry)) (entry *Entry) {
-	var sub *Entry
-	if e != nil {
-		sub = entryPool.Get().(*Entry)
-		sub.open()
-	}
-
-	fn(sub)
-
-	if e != nil {
-		sub.close()
-		e.addKey(key)
-		e.data = append(e.data, sub.data...)
-		sub.discard()
+func (e Entry) String(key string, value string) (entry Entry) {
+	if e.enc != nil {
+		e.enc.addKey(key)
+		e.enc.AppendString(value)
 	}
 	return e
 }
 
-// based on https://golang.org/src/encoding/json/encode.go:884
-func (e *Entry) writeString(s string) {
-	e.data = append(e.data, '"')
-
-	for i := 0; i < len(s); i++ {
-		c := s[i]
-		if c >= 0x20 && c != '\\' && c != '"' {
-			e.data = append(e.data, c)
-			continue
-		}
-		switch c {
-		case '"', '\\':
-			e.data = append(e.data, '\\', '"')
-		case '\n':
-			e.data = append(e.data, '\\', '\n')
-		case '\f':
-			e.data = append(e.data, '\\', '\f')
-		case '\b':
-			e.data = append(e.data, '\\', '\b')
-		case '\r':
-			e.data = append(e.data, '\\', '\r')
-		case '\t':
-			e.data = append(e.data, '\\', '\t')
-		default:
-			e.data = append(e.data, `\u00`...)
-			e.data = append(e.data, hex[c>>4], hex[c&0xF])
-		}
-		continue
+// Object creates a json object
+func (e Entry) Object(key string, fn func(Entry)) (entry Entry) {
+	if e.enc != nil {
+		e.enc.addKey(key)
+		e.enc.openObject()
 	}
 
-	e.data = append(e.data, '"')
+	fn(e)
+
+	if e.enc != nil {
+		e.enc.closeObject()
+	}
+	return e
 }
 
-func (e *Entry) init(logger *Logger, level Level) {
+func (e Entry) init(level Level) {
 
 	t := time.Now()
 	e.level = level
-	e.l = logger
 
-	e.open()
-	e.String("level", level.String())
+	e.enc.openObject()
+	e.enc.addKey("level")
+	e.enc.AppendString(level.String())
 
 	if e.l.config.EnableTime {
+		e.enc.addKey(e.l.config.TimeField)
 
 		switch e.l.config.TimeFormat {
 		case Unix:
-			e.Int("time", t.Unix())
+			e.enc.AppendInt(t.Unix())
 		case UnixMilli:
-			e.Int("time", t.UnixNano()/1000000)
+			e.enc.AppendInt(t.UnixNano() / 1000000)
 		case UnixNano:
-			e.Int("time", t.UnixNano())
+			e.enc.AppendInt(t.UnixNano())
 		default:
-			e.addKey("time")
-			e.data = append(e.data, '"')
-			e.data = t.AppendFormat(e.data, e.l.config.TimeFormat)
-			e.data = append(e.data, '"')
+			e.enc.data = append(e.enc.data, '"')
+			e.enc.data = t.AppendFormat(e.enc.data, e.l.config.TimeFormat)
+			e.enc.data = append(e.enc.data, '"')
 		}
 
 	}
 
 	if e.l.config.EnableCaller {
 		_, f, l, ok := runtime.Caller(3 + e.l.config.CallerSkip)
-
+		e.enc.addKey("caller")
 		if ok {
 			idx := strings.LastIndexByte(f, '/')
 			idx = strings.LastIndexByte(f[:idx], '/')
-			e.String("caller", f[idx+1:]+":"+strconv.Itoa(l))
+			e.enc.AppendString(f[idx+1:] + ":" + strconv.Itoa(l))
 		} else if !ok {
-			e.String("caller", "???")
+			e.enc.AppendString("???")
 		}
 
 	}
-}
-
-func (e *Entry) addKey(key string) {
-
-	if len(e.keys) > 0 {
-		e.data = append(e.data, ',')
-	}
-
-	e.data = append(e.data, '"')
-	e.data = append(e.data, key...)
-	e.data = append(e.data, '"', ':')
-
-	e.keys = append(e.keys, key)
-}
-
-func (e *Entry) hasKey(key string) bool {
-	ks := len(e.keys)
-	if ks > 0 {
-		for i := 0; i < ks; i++ {
-			if key == e.keys[i] {
-				return true
-			}
-		}
-	}
-	return false
 }
