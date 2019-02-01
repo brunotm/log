@@ -137,6 +137,23 @@ func (e Entry) Object(key string, fn func(Entry)) (entry Entry) {
 	return e
 }
 
+// Array creates a json array
+func (e Entry) Array(key string, fn func(Array)) (entry Entry) {
+	var a Array
+	if e.enc != nil {
+		e.enc.addKey(key)
+		e.enc.openArray()
+		a.enc = e.enc
+	}
+
+	fn(a)
+
+	if e.enc != nil {
+		e.enc.closeArray()
+	}
+	return e
+}
+
 func (e Entry) init(level Level) {
 
 	t := time.Now()
