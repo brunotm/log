@@ -89,8 +89,8 @@ func TestLogObject(t *testing.T) {
 	l.Error("error message").
 		String("string value", "text").
 		Int("int value", 8).
-		Object("object", func(e Entry) {
-			e.String("user", "userA").Int("id", 72386784)
+		Object("object", func(o Object) {
+			o.String("user", "userA").Int("id", 72386784)
 		}).Log()
 }
 
@@ -143,4 +143,50 @@ func BenchmarkLogNoLevel(b *testing.B) {
 			Int("int", 8).Float("float value", 722727272.0099).
 			Log()
 	}
+}
+
+func Example() {
+	config := DefaultConfig
+	config.Level = DEBUG
+
+	// New logger with added context
+	l := New(os.Stderr, config).
+		With(func(e Entry) {
+			e.String("application", "myapp")
+		})
+
+	// Simple logging
+	l.Info("info message").String("key", "value").Log()
+	// {"level":"info","time":"2019-01-30T20:42:56.445Z","caller":"_local/main.go:21",
+	// "application":"myapp","message":"info message","key":"value"}
+
+	l.Warn("warn message").Bool("flag", false).Log()
+	// {"level":"warn","time":"2019-01-30T20:42:56.446Z","caller":"_local/main.go:24",
+	// "application":"myapp","message":"warn message","flag":false}
+
+	l.Error("caught an error").String("error", "request error").Log()
+	// {"level":"error","time":"2019-01-30T20:42:56.446Z","caller":"_local/main.go:27",
+	// "application":"myapp","message":"caught an error","error":"request error"}
+
+	// Create nested objects in log entry
+	l.Debug("debug message").Object("request_data", func(o Object) {
+		o.String("request_id", "4BA0D8B1-4ABA-4D70-A55C-3358667C058B").
+			String("user_id", "3B1BA12B-68DF-4DB7-809B-1AC5D8AF663A").
+			Float("value", 3.1415926535)
+	}).Log()
+	// {"level":"debug","time":"2019-01-30T22:44:45.193Z","caller":"_local/main.go:31",
+	// "application":"myapp","message":"debug message","request_data":
+	// {"request_id":"4BA0D8B1-4ABA-4D70-A55C-3358667C058B",
+	// "user_id":"3B1BA12B-68DF-4DB7-809B-1AC5D8AF663A","value":3.1415926535}}
+
+	// Create array objects in log entry
+	l.Debug("debug message").Array("request_points", func(a Array) {
+		a.AppendFloat(3.1415926535).
+			AppendFloat(2.7182818284).
+			AppendFloat(1.41421).
+			AppendFloat(1.6180339887498948482)
+	}).Log()
+	// {"level":"debug","time":"2019-02-04T08:42:15.216Z","caller":"_local/main.go:44",
+	// "application":"myapp","message":"debug message",
+	// "request_points":[3.1415926535,2.7182818284,1.41421,1.618033988749895]}
 }
