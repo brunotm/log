@@ -124,7 +124,7 @@ func (l *Logger) entry(level Level) (entry Entry) {
 
 		enc := encoderPool.Get().(*encoder)
 		entry = Entry{}
-		entry.enc = enc
+		entry.o.enc = enc
 		entry.l = l
 		entry.init(level)
 
@@ -166,7 +166,7 @@ func (l *Logger) Error(message string) (entry Entry) {
 }
 
 func (l *Logger) write(entry Entry) {
-	l.writer.Write(append(entry.enc.data, '\n'))
+	l.writer.Write(append(entry.o.enc.data, '\n'))
 
 	for i := 0; i < len(l.hooks); i++ {
 		l.hooks[i](entry)
@@ -176,6 +176,6 @@ func (l *Logger) write(entry Entry) {
 }
 
 func (l *Logger) discard(entry Entry) {
-	entry.enc.reset()
-	encoderPool.Put(entry.enc)
+	entry.o.enc.reset()
+	encoderPool.Put(entry.o.enc)
 }

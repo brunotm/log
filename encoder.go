@@ -18,6 +18,10 @@ import "strconv"
    limitations under the License.
 */
 
+const (
+	hex = "0123456789abcdef"
+)
+
 type encoder struct {
 	data  []byte
 	index int64
