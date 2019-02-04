@@ -52,31 +52,19 @@ func (a Array) AppendString(value string) (array Array) {
 }
 
 // Object creates a json object
-func (a Array) Object(fn func(Entry)) (array Array) {
-	var e Entry
-	if a.enc != nil {
-		a.enc.openObject()
-		e.enc = a.enc
-	}
-
-	fn(e)
-
-	if a.enc != nil {
-		a.enc.closeObject()
-	}
+func (a Array) Object(fn func(Object)) (array Array) {
+	var o Object
+	a.enc.openObject()
+	o.enc = a.enc
+	fn(o)
+	a.enc.closeObject()
 	return a
 }
 
 // Array creates a json array
 func (a Array) Array(key string, fn func(Array)) (array Array) {
-	if a.enc != nil {
-		a.enc.openArray()
-	}
-
+	a.enc.openArray()
 	fn(a)
-
-	if a.enc != nil {
-		a.enc.closeArray()
-	}
+	a.enc.closeArray()
 	return a
 }
