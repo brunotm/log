@@ -16,6 +16,10 @@ package log
    limitations under the License.
 */
 
+var (
+	nullBytes = []byte(`null`)
+)
+
 // Object value
 type Object struct {
 	enc *encoder
@@ -53,6 +57,13 @@ func (o Object) Uint(key string, value uint64) (object Object) {
 func (o Object) String(key string, value string) (object Object) {
 	o.enc.addKey(key)
 	o.enc.AppendString(value)
+	return o
+}
+
+// Null adds a null value for the given key
+func (o Object) Null(key string) (object Object) {
+	o.enc.addKey(key)
+	o.enc.AppendBytes(nullBytes)
 	return o
 }
 

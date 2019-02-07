@@ -51,6 +51,12 @@ func (a Array) AppendString(value string) (array Array) {
 	return a
 }
 
+// AppendNull value to array
+func (a Array) AppendNull() (array Array) {
+	a.enc.AppendBytes(nullBytes)
+	return a
+}
+
 // Object creates a json object
 func (a Array) Object(fn func(Object)) (array Array) {
 	var o Object

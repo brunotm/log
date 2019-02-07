@@ -34,22 +34,22 @@ func TestLogEntry(t *testing.T) {
 		switch e.Level() {
 		case DEBUG:
 			if 0 != bytes.Compare(
-				[]byte(`{"level":"debug","message":"debug message","string value":"text","int value":8}`), e.Bytes()) {
+				[]byte(`{"level":"debug","message":"debug message","string value":"text","int value":8,"null":null}`), e.Bytes()) {
 				t.Fatal("error logging warn")
 			}
 		case INFO:
 			if 0 != bytes.Compare(
-				[]byte(`{"level":"info","message":"info message","string value":"text","int value":8}`), e.Bytes()) {
+				[]byte(`{"level":"info","message":"info message","string value":"text","int value":8,"null value":null}`), e.Bytes()) {
 				t.Fatal("error logging info")
 			}
 		case WARN:
 			if 0 != bytes.Compare(
-				[]byte(`{"level":"warn","message":"warn message","string value":"text","int value":8}`), e.Bytes()) {
+				[]byte(`{"level":"warn","message":"warn message","string value":"text","int value":8,"null value":null}`), e.Bytes()) {
 				t.Fatal("error logging warn")
 			}
 		case ERROR:
 			if 0 != bytes.Compare(
-				[]byte(`{"level":"error","message":"error message","string value":"text","int value":8}`), e.Bytes()) {
+				[]byte(`{"level":"error","message":"error message","string value":"text","int value":8,"null value":null}`), e.Bytes()) {
 				t.Fatal("error logging error")
 			}
 		}
@@ -57,19 +57,19 @@ func TestLogEntry(t *testing.T) {
 
 	l.Debug("debug message").
 		String("string value", "text").
-		Int("int value", 8).Log()
+		Int("int value", 8).Null("null value").Log()
 
 	l.Info("info message").
 		String("string value", "text").
-		Int("int value", 8).Log()
+		Int("int value", 8).Null("null value").Log()
 
 	l.Warn("warn message").
 		String("string value", "text").
-		Int("int value", 8).Log()
+		Int("int value", 8).Null("null value").Log()
 
 	l.Error("error message").
 		String("string value", "text").
-		Int("int value", 8).Log()
+		Int("int value", 8).Null("null value").Log()
 
 }
 
@@ -102,7 +102,7 @@ func TestLogArray(t *testing.T) {
 	l := New(os.Stdout, config)
 
 	l.Hooks(func(e Entry) {
-		if 0 != bytes.Compare([]byte(`{"level":"error","message":"error message","string value":"text","int value":8,"array":["userA",72386784]}`), e.Bytes()) {
+		if 0 != bytes.Compare([]byte(`{"level":"error","message":"error message","string value":"text","int value":8,"array":["userA",72386784,null]}`), e.Bytes()) {
 			t.Fatal("error logging object")
 		}
 	})
@@ -111,7 +111,7 @@ func TestLogArray(t *testing.T) {
 		String("string value", "text").
 		Int("int value", 8).
 		Array("array", func(a Array) {
-			a.AppendString("userA").AppendInt(72386784)
+			a.AppendString("userA").AppendInt(72386784).AppendNull()
 		}).Log()
 }
 

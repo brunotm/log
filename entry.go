@@ -103,6 +103,14 @@ func (e Entry) String(key string, value string) (entry Entry) {
 	return e
 }
 
+// Null adds a null value for the given key
+func (e Entry) Null(key string) (entry Entry) {
+	if e.o.enc != nil {
+		e.o.Null(key)
+	}
+	return e
+}
+
 // Object creates a json object
 func (e Entry) Object(key string, fn func(Object)) (entry Entry) {
 	if e.o.enc != nil {
