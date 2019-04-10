@@ -115,10 +115,49 @@ func TestLogArray(t *testing.T) {
 		}).Log()
 }
 
+func TestLogSampler(t *testing.T) {
+	logCount := 10000
+	w := &writerCounter{}
+	config := DefaultConfig
+
+	l := New(w, config)
+
+	for x := 0; x < logCount; x++ {
+		l.Error("error message").
+			String("string value", "text").
+			Int("int value", 8).
+			Log()
+	}
+
+	if logCount <= w.count {
+		t.Fatalf("number of iteractions %d number of writes %d", logCount, w.count)
+	}
+
+}
+
 func BenchmarkLog(b *testing.B) {
 	config := DefaultConfig
 	config.Level = DEBUG
 	config.EnableCaller = false
+	config.EnableSampler = false
+
+	l := New(ioutil.Discard, config)
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		l.Info("informational message").
+			String("string value", "text").
+			Int("int value", 8).Float("float", 722727272.0099).
+			Int("int", 8).Float("float value", 722727272.0099).
+			Log()
+	}
+}
+
+func BenchmarkLogWithSampler(b *testing.B) {
+	config := DefaultConfig
+	config.Level = DEBUG
+	config.EnableCaller = false
+	config.EnableSampler = true
+
 	l := New(ioutil.Discard, config)
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
@@ -189,4 +228,14 @@ func Example() {
 	// {"level":"debug","time":"2019-02-04T08:42:15.216Z","caller":"_local/main.go:44",
 	// "application":"myapp","message":"debug message",
 	// "request_points":[3.1415926535,2.7182818284,1.41421,1.618033988749895]}
+
+}
+
+type writerCounter struct {
+	count int
+}
+
+func (w *writerCounter) Write(p []byte) (n int, err error) {
+	w.count++
+	return len(p), nil
 }

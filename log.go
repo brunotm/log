@@ -20,6 +20,7 @@ import (
 	"io"
 	"io/ioutil"
 	"sync"
+	"time"
 )
 
 const (
@@ -40,13 +41,14 @@ var (
 
 	// DefaultConfig for logger
 	DefaultConfig = Config{
-		Level:        INFO,
-		EnableCaller: true,
-		CallerSkip:   0,
-		EnableTime:   true,
-		TimeField:    "time",
-		TimeFormat:   ISO8601,
-		MessageField: "message",
+		Level:         INFO,
+		EnableCaller:  true,
+		CallerSkip:    0,
+		EnableTime:    true,
+		TimeField:     "time",
+		TimeFormat:    ISO8601,
+		MessageField:  "message",
+		EnableSampler: true,
 	}
 )
 
@@ -66,21 +68,23 @@ func newEncoder() interface{} {
 
 // Config type for logger
 type Config struct {
-	Level        Level
-	EnableCaller bool
-	CallerSkip   int
-	EnableTime   bool
-	TimeField    string
-	TimeFormat   string
-	MessageField string
+	Level         Level
+	EnableCaller  bool
+	CallerSkip    int
+	EnableTime    bool
+	TimeField     string
+	TimeFormat    string
+	MessageField  string
+	EnableSampler bool
 }
 
 // Logger type
 type Logger struct {
-	config Config
-	writer io.Writer
-	hooks  []func(Entry)
-	with   []func(Entry)
+	config  Config
+	writer  io.Writer
+	hooks   []func(Entry)
+	with    []func(Entry)
+	sampler *sampler
 }
 
 // New creates a new logger with the give config and writer.
@@ -91,11 +95,16 @@ func New(writer io.Writer, config Config) (logger *Logger) {
 		writer = ioutil.Discard
 	}
 
-	return &Logger{
-		writer: writer,
-		config: config,
+	logger = &Logger{}
+
+	if config.EnableSampler {
+		logger.sampler = newSampler(time.Second, 100, 100)
 	}
 
+	logger.writer = writer
+	logger.config = config
+
+	return logger
 }
 
 // With register functions to apply context to the log entries.
@@ -117,10 +126,14 @@ func (l *Logger) Hooks(f ...func(Entry)) {
 }
 
 // entry creates a new log entry with the specified level to be manipulated directly
-func (l *Logger) entry(level Level) (entry Entry) {
+func (l *Logger) entry(level Level, message string) (entry Entry) {
 
 	// Only initialize Entry if on or above the logger Level
 	if level >= l.config.Level {
+
+		if l.config.EnableSampler && !l.sampler.check(level, message) {
+			return entry
+		}
 
 		enc := encoderPool.Get().(*encoder)
 		entry = Entry{}
@@ -132,6 +145,7 @@ func (l *Logger) entry(level Level) (entry Entry) {
 			l.with[i](entry)
 		}
 
+		entry.String(l.config.MessageField, message)
 	}
 
 	return entry
@@ -139,29 +153,25 @@ func (l *Logger) entry(level Level) (entry Entry) {
 
 // Debug creates a new log entry with the given message.
 func (l *Logger) Debug(message string) (entry Entry) {
-	entry = l.entry(DEBUG)
-	entry.String(l.config.MessageField, message)
+	entry = l.entry(DEBUG, message)
 	return entry
 }
 
 // Info creates a new log entry with the given message.
 func (l *Logger) Info(message string) (entry Entry) {
-	entry = l.entry(INFO)
-	entry.String(l.config.MessageField, message)
+	entry = l.entry(INFO, message)
 	return entry
 }
 
 // Warn creates a new log entry with the given message.
 func (l *Logger) Warn(message string) (entry Entry) {
-	entry = l.entry(WARN)
-	entry.String(l.config.MessageField, message)
+	entry = l.entry(WARN, message)
 	return entry
 }
 
 // Error creates a new log entry with the given message.
 func (l *Logger) Error(message string) (entry Entry) {
-	entry = l.entry(ERROR)
-	entry.String(l.config.MessageField, message)
+	entry = l.entry(ERROR, message)
 	return entry
 }
 

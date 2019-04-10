@@ -72,8 +72,9 @@ Message: `{"level":"info","time":"2019-01-30T20:54:07.029Z","message":"informati
 
 ```
 pkg: github.com/brunotm/log
-BenchmarkLog-4                   2000000               863 ns/op               0 B/op          0 allocs/op
-BenchmarkLogNoLevel-4           50000000                26.4 ns/op             0 B/op          0 allocs/op
+BenchmarkLog-4                   2000000               860 ns/op               0 B/op          0 allocs/op
+BenchmarkLogWithSampler-4       20000000               115 ns/op               0 B/op          0 allocs/op
+BenchmarkLogNoLevel-4           500000000                3.68 ns/op            0 B/op          0 allocs/op
 ```
 
 ## Contact

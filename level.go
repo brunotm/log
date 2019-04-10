@@ -28,6 +28,8 @@ const (
 	WARN = Level(3)
 	// ERROR log level
 	ERROR = Level(4)
+
+	maxLevel = int(ERROR)
 )
 
 func (l Level) String() (level string) {
