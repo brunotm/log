@@ -135,11 +135,11 @@ func TestLogSampler(t *testing.T) {
 
 }
 
-func BenchmarkLog(b *testing.B) {
+func BenchmarkLogNoSampling(b *testing.B) {
 	config := DefaultConfig
 	config.Level = DEBUG
 	config.EnableCaller = false
-	config.EnableSampler = false
+	config.EnableSampling = false
 
 	l := New(ioutil.Discard, config)
 	b.ReportAllocs()
@@ -152,11 +152,11 @@ func BenchmarkLog(b *testing.B) {
 	}
 }
 
-func BenchmarkLogWithSampler(b *testing.B) {
+func BenchmarkLogWithSampling(b *testing.B) {
 	config := DefaultConfig
 	config.Level = DEBUG
 	config.EnableCaller = false
-	config.EnableSampler = true
+	config.EnableSampling = true
 
 	l := New(ioutil.Discard, config)
 	b.ReportAllocs()

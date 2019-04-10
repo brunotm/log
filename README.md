@@ -8,7 +8,10 @@
 A simple, leveled, fast, zero allocation, json structured logging package for Go.
 Designed to make logging on the hot path dirt cheap, dependency free and my life easier.
 
-It also supports nesting objects and arrays to structure more complex log entries
+It also supports nesting objects and arrays to create more complex log entries.
+
+By default log entries with the same level and message within each second, will be sampled to cap CPU and I/O load under high logging activity.
+This behaviour can be disabled by setting `Config.EnableSampling to false`
 
 ## Usage
 ```go
@@ -72,9 +75,9 @@ Message: `{"level":"info","time":"2019-01-30T20:54:07.029Z","message":"informati
 
 ```
 pkg: github.com/brunotm/log
-BenchmarkLog-4                   2000000               860 ns/op               0 B/op          0 allocs/op
-BenchmarkLogWithSampler-4       20000000               115 ns/op               0 B/op          0 allocs/op
-BenchmarkLogNoLevel-4           500000000                3.68 ns/op            0 B/op          0 allocs/op
+BenchmarkLogNoSampling-4          2000000               860 ns/op               0 B/op          0 allocs/op
+BenchmarkLogWithSampling-4       20000000               115 ns/op               0 B/op          0 allocs/op
+BenchmarkLogNoLevel-4           500000000                3.68 ns/op             0 B/op          0 allocs/op
 ```
 
 ## Contact
