@@ -90,25 +90,25 @@ func (cs *counters) get(lvl Level, message string) *counter {
 // absolute precision; under load, each tick may be slightly over- or
 // under-sampled.
 type sampler struct {
-	counters   counters
-	tick       time.Duration
-	first      uint64
-	thereafter uint64
+	counters counters
+	tick     time.Duration
+	start    uint64
+	factor   uint64
 }
 
-func newSampler(tick time.Duration, first, thereafter int) (s *sampler) {
+func newSampler(tick time.Duration, start, factor int) (s *sampler) {
 	return &sampler{
-		tick:       tick,
-		counters:   counters{},
-		first:      uint64(first),
-		thereafter: uint64(thereafter),
+		tick:     tick,
+		counters: counters{},
+		start:    uint64(start),
+		factor:   uint64(factor),
 	}
 }
 
 func (s *sampler) check(lvl Level, msg string) (ok bool) {
 	counter := s.counters.get(lvl, msg)
 	n := counter.incCheckReset(time.Now().UnixNano(), s.tick)
-	if n > s.first && (n-s.first)%s.thereafter != 0 {
+	if n > s.start && (n-s.start)%s.factor != 0 {
 		return false
 	}
 	return true

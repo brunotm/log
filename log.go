@@ -41,17 +41,17 @@ var (
 
 	// DefaultConfig for logger
 	DefaultConfig = Config{
-		Level:              INFO,
-		EnableCaller:       true,
-		CallerSkip:         0,
-		EnableTime:         true,
-		TimeField:          "time",
-		TimeFormat:         ISO8601,
-		MessageField:       "message",
-		EnableSampling:     true,
-		SamplingTick:       time.Second,
-		SamplingInitial:    100,
-		SamplingThereafter: 100,
+		Level:          INFO,
+		EnableCaller:   true,
+		CallerSkip:     0,
+		EnableTime:     true,
+		TimeField:      "time",
+		TimeFormat:     ISO8601,
+		MessageField:   "message",
+		EnableSampling: true,
+		SamplingTick:   time.Second,
+		SamplingStart:  100,
+		SamplingFactor: 100,
 	}
 )
 
@@ -71,17 +71,17 @@ func newEncoder() interface{} {
 
 // Config type for logger
 type Config struct {
-	Level              Level         // Log level
-	EnableCaller       bool          // Enable caller info
-	CallerSkip         int           // Skip level of callers, useful if wrapping the logger
-	EnableTime         bool          // Enable log timestamps
-	TimeField          string        // Field name for the log timestamp
-	TimeFormat         string        // Time Format for log timestamp
-	MessageField       string        // Field name for the log message
-	EnableSampling     bool          // Enable log sampling to cap CPU and I/O load
-	SamplingTick       time.Duration // Resolution at which entries will be sampled
-	SamplingInitial    int           // Initial number of entries after witch we will start sampling
-	SamplingThereafter int           // When sampling, log after every nth entry
+	Level          Level         // Log level
+	EnableCaller   bool          // Enable caller info
+	CallerSkip     int           // Skip level of callers, useful if wrapping the logger
+	EnableTime     bool          // Enable log timestamps
+	TimeField      string        // Field name for the log timestamp
+	TimeFormat     string        // Time Format for log timestamp
+	MessageField   string        // Field name for the log message
+	EnableSampling bool          // Enable log sampling to cap CPU and I/O load
+	SamplingTick   time.Duration // Resolution at which entries will be sampled
+	SamplingStart  int           // Start sampling after this number of similar entries within SamplingTick
+	SamplingFactor int           // Reduction factor when sampling
 }
 
 // Logger type
@@ -106,8 +106,8 @@ func New(writer io.Writer, config Config) (logger *Logger) {
 	if config.EnableSampling {
 		logger.sampler = newSampler(
 			config.SamplingTick,
-			config.SamplingInitial,
-			config.SamplingThereafter)
+			config.SamplingStart,
+			config.SamplingFactor)
 	}
 
 	logger.writer = writer
