@@ -127,11 +127,16 @@ func (l *Logger) With(f ...func(Entry)) (logger *Logger) {
 	}
 }
 
-// Hooks register funtions to the current logger that are applied
-// after the entry is written. Useful for sending log data to log aggregation tools
-// or capturing metrics.
-func (l *Logger) Hooks(f ...func(Entry)) {
-	l.hooks = append(l.hooks, f...)
+// Hooks register functions to the current logger that are applied
+// after the entry is written. Hooks are cumulative and useful for
+// sending log data to log aggregation tools or capturing metrics.
+func (l *Logger) Hooks(f ...func(Entry)) (logger *Logger) {
+	return &Logger{
+		config: l.config,
+		writer: l.writer,
+		hooks:  append(l.hooks, f...),
+		with:   l.with,
+	}
 }
 
 // entry creates a new log entry with the specified level to be manipulated directly
