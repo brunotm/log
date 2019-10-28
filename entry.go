@@ -58,7 +58,7 @@ func (e Entry) Level() (level Level) {
 
 // Bytes return the current entry bytes. This is intended to be used in hooks
 // That will be applied after calling Log().
-// The retuned []byte is not a copy and must not be modified directly.
+// The returned []byte is not a copy and must not be modified directly.
 func (e Entry) Bytes() (data []byte) {
 	return e.o.enc.data
 }
