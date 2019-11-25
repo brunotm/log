@@ -18,6 +18,7 @@ package log
 
 import (
 	"bytes"
+	"errors"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -34,22 +35,22 @@ func TestLogEntry(t *testing.T) {
 		switch e.Level() {
 		case DEBUG:
 			if 0 != bytes.Compare(
-				[]byte(`{"level":"debug","message":"debug message","string value":"text","int value":8,"null":null}`), e.Bytes()) {
+				[]byte(`{"level":"debug","message":"debug message","string value":"text","int value":8,"null":null,"error":"new error",}`), e.Bytes()) {
 				t.Fatal("error logging warn")
 			}
 		case INFO:
 			if 0 != bytes.Compare(
-				[]byte(`{"level":"info","message":"info message","string value":"text","int value":8,"null value":null}`), e.Bytes()) {
+				[]byte(`{"level":"info","message":"info message","string value":"text","int value":8,"null value":null,"error":"new error",}`), e.Bytes()) {
 				t.Fatal("error logging info")
 			}
 		case WARN:
 			if 0 != bytes.Compare(
-				[]byte(`{"level":"warn","message":"warn message","string value":"text","int value":8,"null value":null}`), e.Bytes()) {
+				[]byte(`{"level":"warn","message":"warn message","string value":"text","int value":8,"null value":null,"error":"new error",}`), e.Bytes()) {
 				t.Fatal("error logging warn")
 			}
 		case ERROR:
 			if 0 != bytes.Compare(
-				[]byte(`{"level":"error","message":"error message","string value":"text","int value":8,"null value":null}`), e.Bytes()) {
+				[]byte(`{"level":"error","message":"error message","string value":"text","int value":8,"null value":null,"error":"new error",}`), e.Bytes()) {
 				t.Fatal("error logging error")
 			}
 		}
@@ -57,19 +58,23 @@ func TestLogEntry(t *testing.T) {
 
 	l.Debug("debug message").
 		String("string value", "text").
-		Int("int value", 8).Null("null value").Log()
+		Int("int value", 8).Null("null value").
+		Error("error", errors.New("new error")).Log()
 
 	l.Info("info message").
 		String("string value", "text").
-		Int("int value", 8).Null("null value").Log()
+		Int("int value", 8).Null("null value").
+		Error("error", errors.New("new error")).Log()
 
 	l.Warn("warn message").
 		String("string value", "text").
-		Int("int value", 8).Null("null value").Log()
+		Int("int value", 8).Null("null value").
+		Error("error", errors.New("new error")).Log()
 
 	l.Error("error message").
 		String("string value", "text").
-		Int("int value", 8).Null("null value").Log()
+		Int("int value", 8).Null("null value").
+		Error("error", errors.New("new error")).Log()
 
 }
 
