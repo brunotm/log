@@ -23,19 +23,6 @@ import (
 	"testing"
 )
 
-func TestDefaultLogger(t *testing.T) {
-
-	defaultLogger.Hooks(func(e Entry) {
-		if !bytes.Contains(e.Bytes(), []byte(`debug message`)) {
-			t.Fatal("error logging error")
-		}
-	})
-
-	defaultLogger.Info("debug message").
-		String("string value", "text").
-		Int("int value", 8).Null("null value").Log()
-}
-
 func TestLogEntry(t *testing.T) {
 	config := DefaultConfig
 	config.EnableTime = false
