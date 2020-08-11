@@ -36,20 +36,18 @@ func (e Entry) reset() {
 	e.o.enc.reset()
 }
 
-// Log logs the current entry. An entry must not be used after calling Log.
-func (e Entry) Log() {
+// Write logs the current entry. An entry must not be used after calling Write().
+func (e Entry) Write() {
 	if e.o.enc != nil {
 		e.o.enc.closeObject()
 		e.l.write(e)
 	}
 }
 
-// Discard the current entry without logging it.
-// func (e Entry) discard() {
-// 	if e.o.enc != nil {
-// 		e.l.discard(e)
-// 	}
-// }
+// Log logs the current entry. An entry must not be used after calling Log.
+func (e Entry) Log() {
+	e.Write()
+}
 
 // Level returns the log level of current entry.
 func (e Entry) Level() (level Level) {
@@ -64,7 +62,7 @@ func (e Entry) Bytes() (data []byte) {
 }
 
 // Bool adds the given bool key/value
-func (e Entry) Bool(key string, value bool) (Entry Entry) {
+func (e Entry) Bool(key string, value bool) (entry Entry) {
 	if e.o.enc != nil {
 		e.o.Bool(key, value)
 	}
@@ -141,9 +139,6 @@ func (e Entry) init(level Level) {
 	e.level = level
 
 	e.o.enc.openObject()
-	e.o.enc.addKey("level")
-	e.o.enc.AppendString(level.String())
-
 	if e.l.config.EnableTime {
 		e.o.enc.addKey(e.l.config.TimeField)
 
@@ -161,6 +156,9 @@ func (e Entry) init(level Level) {
 		}
 
 	}
+
+	e.o.enc.addKey("level")
+	e.o.enc.AppendString(level.String())
 
 	if e.l.config.EnableCaller {
 		_, f, l, ok := runtime.Caller(3 + e.l.config.CallerSkip)

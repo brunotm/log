@@ -114,12 +114,13 @@ func (s *sampler) check(lvl Level, msg string) (ok bool) {
 	return true
 }
 
+const (
+	offset64 uint64 = 14695981039346656037
+	prime64  uint64 = 1099511628211
+)
+
 // fnv64a, adapted from "hash/fnv"
 func fnv64a(s string) uint64 {
-	const (
-		offset64 uint64 = 14695981039346656037
-		prime64  uint64 = 1099511628211
-	)
 
 	hash := offset64
 	for i := 0; i < len(s); i++ {

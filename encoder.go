@@ -23,8 +23,7 @@ const (
 )
 
 type encoder struct {
-	data  []byte
-	index int64
+	data []byte
 }
 
 func (e *encoder) checkComma() {
@@ -60,7 +59,6 @@ func (e *encoder) closeArray() {
 
 func (e *encoder) reset() {
 	e.data = e.data[:0]
-	e.index = -1
 }
 
 func (e *encoder) AppendBool(value bool) {

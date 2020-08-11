@@ -19,6 +19,7 @@ package log
 import (
 	"io"
 	"io/ioutil"
+	"os"
 	"sync"
 	"time"
 )
@@ -66,7 +67,7 @@ func init() {
 }
 
 func newEncoder() interface{} {
-	return &encoder{data: make([]byte, 0, entrySize), index: -1}
+	return &encoder{data: make([]byte, 0, entrySize)}
 }
 
 // Config type for logger
@@ -141,17 +142,16 @@ func (l *Logger) Hooks(f ...func(Entry)) (logger *Logger) {
 
 // entry creates a new log entry with the specified level to be manipulated directly
 func (l *Logger) entry(level Level, message string) (entry Entry) {
+	entry.level = level
 
 	// Only initialize Entry if on or above the logger Level
-	if level >= l.config.Level {
+	if entry.level >= l.config.Level {
 
 		if l.config.EnableSampling && !l.sampler.check(level, message) {
 			return entry
 		}
 
-		enc := encoderPool.Get().(*encoder)
-		entry = Entry{}
-		entry.o.enc = enc
+		entry.o.enc = encoderPool.Get().(*encoder)
 		entry.l = l
 		entry.init(level)
 
@@ -189,7 +189,22 @@ func (l *Logger) Error(message string) (entry Entry) {
 	return entry
 }
 
+// Fatal creates a new log entry with the given message.
+// After write, Fatal calls os.Exit(1) terminating the running program
+func (l *Logger) Fatal(message string) (entry Entry) {
+	entry = l.entry(FATAL, message)
+	return entry
+}
+
 func (l *Logger) write(entry Entry) {
+	if entry.level == FATAL {
+		defer os.Exit(1)
+	}
+
+	if entry.o.enc == nil {
+		return
+	}
+
 	l.writer.Write(append(entry.o.enc.data, '\n'))
 
 	for i := 0; i < len(l.hooks); i++ {

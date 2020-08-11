@@ -34,8 +34,10 @@ const (
 	WARN = Level(3)
 	// ERROR log level
 	ERROR = Level(4)
+	// FATAL log level
+	FATAL = Level(5)
 
-	maxLevel = int(ERROR)
+	maxLevel = int(FATAL)
 )
 
 func (l Level) String() (level string) {
@@ -48,6 +50,8 @@ func (l Level) String() (level string) {
 		return "warn"
 	case ERROR:
 		return "error"
+	case FATAL:
+		return "fatal"
 	default:
 		return "unknown"
 	}
@@ -66,6 +70,8 @@ func ParseLevel(level string) (l Level, err error) {
 		return WARN, nil
 	case "error":
 		return ERROR, nil
+	case "fatal":
+		return FATAL, nil
 	default:
 		return Level(0), errors.New("unknown log level")
 	}
