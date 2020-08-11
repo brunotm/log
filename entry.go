@@ -17,6 +17,7 @@ package log
 */
 
 import (
+	"os"
 	"runtime"
 	"strconv"
 	"strings"
@@ -44,12 +45,15 @@ func (e Entry) Log() {
 	}
 }
 
-// Discard the current entry without logging it.
-// func (e Entry) discard() {
-// 	if e.o.enc != nil {
-// 		e.l.discard(e)
-// 	}
-// }
+// Fatal logs the current entry and calls os.Exit(1).
+func (e Entry) Fatal() {
+	if e.o.enc != nil {
+		e.o.enc.closeObject()
+		e.l.write(e)
+	}
+
+	os.Exit(1)
+}
 
 // Level returns the log level of current entry.
 func (e Entry) Level() (level Level) {
