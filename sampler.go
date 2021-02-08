@@ -64,7 +64,7 @@ func (c *counter) incCheckReset(t int64, tick time.Duration) uint64 {
 	newResetAfter := t + tick.Nanoseconds()
 	if !atomic.CompareAndSwapInt64(&c.resetAt, resetAfter, newResetAfter) {
 		// We raced with another goroutine trying to reset, and it also reset
-		// the counter to 1, so we need to reincrement the counter.
+		// the counter to 1, so we need to re-increment the counter.
 		return atomic.AddUint64(&c.counter, 1)
 	}
 

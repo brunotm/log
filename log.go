@@ -1,3 +1,4 @@
+// Package log provides a simple, leveled, fast, zero allocation, json structured logging package for Go
 package log
 
 /*

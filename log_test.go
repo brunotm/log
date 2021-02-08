@@ -34,23 +34,23 @@ func TestLogEntry(t *testing.T) {
 	l.Hooks(func(e Entry) {
 		switch e.Level() {
 		case DEBUG:
-			if 0 != bytes.Compare(
-				[]byte(`{"level":"debug","message":"debug message","string value":"text","int value":8,"null":null,"error":"new error",}`), e.Bytes()) {
+			w := []byte(`{"level":"debug","message":"debug message","string value":"text","int value":8,"null":null,"error":"new error",}`)
+			if !bytes.Equal(w, e.Bytes()) {
 				t.Fatal("error logging warn")
 			}
 		case INFO:
-			if 0 != bytes.Compare(
-				[]byte(`{"level":"info","message":"info message","string value":"text","int value":8,"null value":null,"error":"new error",}`), e.Bytes()) {
+			w := []byte(`{"level":"info","message":"info message","string value":"text","int value":8,"null value":null,"error":"new error",}`)
+			if !bytes.Equal(w, e.Bytes()) {
 				t.Fatal("error logging info")
 			}
 		case WARN:
-			if 0 != bytes.Compare(
-				[]byte(`{"level":"warn","message":"warn message","string value":"text","int value":8,"null value":null,"error":"new error",}`), e.Bytes()) {
+			w := []byte(`{"level":"warn","message":"warn message","string value":"text","int value":8,"null value":null,"error":"new error",}`)
+			if !bytes.Equal(w, e.Bytes()) {
 				t.Fatal("error logging warn")
 			}
 		case ERROR:
-			if 0 != bytes.Compare(
-				[]byte(`{"level":"error","message":"error message","string value":"text","int value":8,"null value":null,"error":"new error",}`), e.Bytes()) {
+			w := []byte(`{"level":"error","message":"error message","string value":"text","int value":8,"null value":null,"error":"new error",}`)
+			if !bytes.Equal(w, e.Bytes()) {
 				t.Fatal("error logging error")
 			}
 		}
@@ -86,7 +86,8 @@ func TestLogObject(t *testing.T) {
 	l := New(os.Stdout, config)
 
 	l.Hooks(func(e Entry) {
-		if 0 != bytes.Compare([]byte(`{"level":"error","message":"error message","string value":"text","int value":8,"object":{"user":"userA","id":72386784}}`), e.Bytes()) {
+		w := []byte(`{"level":"error","message":"error message","string value":"text","int value":8,"object":{"user":"userA","id":72386784}}`)
+		if bytes.Equal(w, e.Bytes()) {
 			t.Fatal("error logging object")
 		}
 	})
@@ -107,7 +108,8 @@ func TestLogArray(t *testing.T) {
 	l := New(os.Stdout, config)
 
 	l.Hooks(func(e Entry) {
-		if 0 != bytes.Compare([]byte(`{"level":"error","message":"error message","string value":"text","int value":8,"array":["userA",72386784,null]}`), e.Bytes()) {
+		w := []byte(`{"level":"error","message":"error message","string value":"text","int value":8,"array":["userA",72386784,null]}`)
+		if !bytes.Equal(w, e.Bytes()) {
 			t.Fatal("error logging object")
 		}
 	})
@@ -135,7 +137,7 @@ func TestLogSampler(t *testing.T) {
 	}
 
 	if logCount <= w.count {
-		t.Fatalf("number of iteractions %d number of writes %d", logCount, w.count)
+		t.Fatalf("number of interactions %d number of writes %d", logCount, w.count)
 	}
 
 }
@@ -196,21 +198,21 @@ func Example() {
 	// New logger with added context
 	l := New(os.Stderr, config).
 		With(func(e Entry) {
-			e.String("application", "myapp")
+			e.String("application", "app1")
 		})
 
 	// Simple logging
 	l.Info("info message").String("key", "value").Write()
 	// {"level":"info","time":"2019-01-30T20:42:56.445Z","caller":"_local/main.go:21",
-	// "application":"myapp","message":"info message","key":"value"}
+	// "application":"app1","message":"info message","key":"value"}
 
 	l.Warn("warn message").Bool("flag", false).Write()
 	// {"level":"warn","time":"2019-01-30T20:42:56.446Z","caller":"_local/main.go:24",
-	// "application":"myapp","message":"warn message","flag":false}
+	// "application":"app1","message":"warn message","flag":false}
 
 	l.Error("caught an error").String("error", "request error").Write()
 	// {"level":"error","time":"2019-01-30T20:42:56.446Z","caller":"_local/main.go:27",
-	// "application":"myapp","message":"caught an error","error":"request error"}
+	// "application":"app1","message":"caught an error","error":"request error"}
 
 	// Create nested objects in log entry
 	l.Debug("debug message").Object("request_data", func(o Object) {
@@ -219,7 +221,7 @@ func Example() {
 			Float("value", 3.1415926535)
 	}).Write()
 	// {"level":"debug","time":"2019-01-30T22:44:45.193Z","caller":"_local/main.go:31",
-	// "application":"myapp","message":"debug message","request_data":
+	// "application":"app1","message":"debug message","request_data":
 	// {"request_id":"4BA0D8B1-4ABA-4D70-A55C-3358667C058B",
 	// "user_id":"3B1BA12B-68DF-4DB7-809B-1AC5D8AF663A","value":3.1415926535}}
 
@@ -231,7 +233,7 @@ func Example() {
 			AppendFloat(1.6180339887498948482)
 	}).Write()
 	// {"level":"debug","time":"2019-02-04T08:42:15.216Z","caller":"_local/main.go:44",
-	// "application":"myapp","message":"debug message",
+	// "application":"app1","message":"debug message",
 	// "request_points":[3.1415926535,2.7182818284,1.41421,1.618033988749895]}
 
 }
