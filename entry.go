@@ -44,11 +44,6 @@ func (e Entry) Write() {
 	}
 }
 
-// Log logs the current entry. An entry must not be used after calling Log.
-func (e Entry) Log() {
-	e.Write()
-}
-
 // Level returns the log level of current entry.
 func (e Entry) Level() (level Level) {
 	return e.level
