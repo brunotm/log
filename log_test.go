@@ -78,48 +78,25 @@ func TestLogEntry(t *testing.T) {
 
 }
 
-func TestLogObject(t *testing.T) {
+func TestLogText(t *testing.T) {
 	config := DefaultConfig
 	config.EnableTime = false
 	config.EnableCaller = false
 	config.Level = DEBUG
+	config.Text = true
 	l := New(os.Stdout, config)
 
 	l.Hooks(func(e Entry) {
-		w := []byte(`{"level":"error","message":"error message","string value":"text","int value":8,"object":{"user":"userA","id":72386784}}`)
-		if bytes.Equal(w, e.Bytes()) {
-			t.Fatal("error logging object")
-		}
-	})
-
-	l.Error("error message").
-		String("string value", "text").
-		Int("int value", 8).
-		Object("object", func(o Object) {
-			o.String("user", "userA").Int("id", 72386784)
-		}).Write()
-}
-
-func TestLogArray(t *testing.T) {
-	config := DefaultConfig
-	config.EnableTime = false
-	config.EnableCaller = false
-	config.Level = DEBUG
-	l := New(os.Stdout, config)
-
-	l.Hooks(func(e Entry) {
-		w := []byte(`{"level":"error","message":"error message","string value":"text","int value":8,"array":["userA",72386784,null]}`)
+		w := []byte(`level="debug" message="debug message" string="text" int=8 null=null error="new error"`)
 		if !bytes.Equal(w, e.Bytes()) {
-			t.Fatal("error logging object")
+			t.Fatal("error logging warn")
 		}
 	})
 
-	l.Error("error message").
-		String("string value", "text").
-		Int("int value", 8).
-		Array("array", func(a Array) {
-			a.AppendString("userA").AppendInt(72386784).AppendNull()
-		}).Write()
+	l.Debug("debug message").
+		String("string", "text").
+		Int("int", 8).Null("null").
+		Error("error", errors.New("new error")).Write()
 }
 
 func TestLogSampler(t *testing.T) {
@@ -153,8 +130,8 @@ func BenchmarkLogNoSampling(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		l.Info("informational message").
 			String("string value", "text").
-			Int("int value", 8).Float("float", 722727272.0099).
-			Int("int", 8).Float("float value", 722727272.0099).
+			Int("int value", 8).Float64("float", 722727272.0099).
+			Int("int", 8).Float64("float value", 722727272.0099).
 			Write()
 	}
 }
@@ -170,8 +147,8 @@ func BenchmarkLogWithSampling(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		l.Info("informational message").
 			String("string value", "text").
-			Int("int value", 8).Float("float", 722727272.0099).
-			Int("int", 8).Float("float value", 722727272.0099).
+			Int("int value", 8).Float64("float", 722727272.0099).
+			Int("int", 8).Float64("float value", 722727272.0099).
 			Write()
 	}
 }
@@ -185,8 +162,8 @@ func BenchmarkLogNoLevel(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		l.Info("informational message").
 			String("string value", "text").
-			Int("int value", 8).Float("float", 722727272.0099).
-			Int("int", 8).Float("float value", 722727272.0099).
+			Int("int value", 8).Float64("float", 722727272.0099).
+			Int("int", 8).Float64("float value", 722727272.0099).
 			Write()
 	}
 }
@@ -194,48 +171,38 @@ func BenchmarkLogNoLevel(b *testing.B) {
 func Example() {
 	config := DefaultConfig
 	config.Level = DEBUG
+	config.Text = true // Enable text logging
 
 	// New logger with added context
-	l := New(os.Stderr, config).
+	l := New(os.Stdout, config).
 		With(func(e Entry) {
-			e.String("application", "app1")
+			e.String("app", "app1")
 		})
 
 	// Simple logging
 	l.Info("info message").String("key", "value").Write()
-	// {"level":"info","time":"2019-01-30T20:42:56.445Z","caller":"_local/main.go:21",
-	// "application":"app1","message":"info message","key":"value"}
+	// Text format:
+	// time="2021-03-25T13:32:50.391Z" level="info" caller="_local/main.go:26" app="app1" message="info message" key="value"
+	// JSON format:
+	// {"time":"2021-03-25T13:33:20.547Z", "level":"info", "caller":"_local/main.go:26", "app":"app1", "message":"info message", "key":"value"}
 
 	l.Warn("warn message").Bool("flag", false).Write()
-	// {"level":"warn","time":"2019-01-30T20:42:56.446Z","caller":"_local/main.go:24",
-	// "application":"app1","message":"warn message","flag":false}
+	// Text format:
+	// time="2021-03-25T13:32:50.391Z" level="warn" caller="_local/main.go:29" app="app1" message="warn message" flag=false
+	// JSON format:
+	// {"time":"2021-03-25T13:33:20.547Z", "level":"warn", "caller":"_local/main.go:29", "app":"app1", "message":"warn message", "flag":false}
 
 	l.Error("caught an error").String("error", "request error").Write()
-	// {"level":"error","time":"2019-01-30T20:42:56.446Z","caller":"_local/main.go:27",
-	// "application":"app1","message":"caught an error","error":"request error"}
+	// Text format:
+	// time="2021-03-25T13:32:50.391Z" level="error" caller="_local/main.go:32" app="app1" message="caught an error" error="request error"
+	// JSON format:
+	// {"time":"2021-03-25T13:33:20.547Z", "level":"error", "caller":"_local/main.go:32", "app":"app1", "message":"caught an error", "error":"request error"}
 
-	// Create nested objects in log entry
-	l.Debug("debug message").Object("request_data", func(o Object) {
-		o.String("request_id", "4BA0D8B1-4ABA-4D70-A55C-3358667C058B").
-			String("user_id", "3B1BA12B-68DF-4DB7-809B-1AC5D8AF663A").
-			Float("value", 3.1415926535)
-	}).Write()
-	// {"level":"debug","time":"2019-01-30T22:44:45.193Z","caller":"_local/main.go:31",
-	// "application":"app1","message":"debug message","request_data":
-	// {"request_id":"4BA0D8B1-4ABA-4D70-A55C-3358667C058B",
-	// "user_id":"3B1BA12B-68DF-4DB7-809B-1AC5D8AF663A","value":3.1415926535}}
-
-	// Create array objects in log entry
-	l.Debug("debug message").Array("request_points", func(a Array) {
-		a.AppendFloat(3.1415926535).
-			AppendFloat(2.7182818284).
-			AppendFloat(1.41421).
-			AppendFloat(1.6180339887498948482)
-	}).Write()
-	// {"level":"debug","time":"2019-02-04T08:42:15.216Z","caller":"_local/main.go:44",
-	// "application":"app1","message":"debug message",
-	// "request_points":[3.1415926535,2.7182818284,1.41421,1.618033988749895]}
-
+	l.Fatal("caught an unrecoverable error").Error("error", errors.New("some error")).Write()
+	// Text format:
+	// time="2021-03-25T13:32:50.391Z" level="fatal" caller="_local/main.go:35" app="app1" message="caught an unrecoverable error" error="some error"
+	// JSON format:
+	// {"time":"2021-03-25T13:33:20.547Z", "level":"fatal", "caller":"_local/main.go:35", "app":"app1", "message":"caught an unrecoverable error", "error":"some error"}
 }
 
 type writerCounter struct {

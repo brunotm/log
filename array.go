@@ -29,19 +29,19 @@ func (a Array) AppendBool(value bool) (array Array) {
 
 // AppendFloat value to array
 func (a Array) AppendFloat(value float64) (array Array) {
-	a.enc.AppendFloat(value)
+	a.enc.AppendFloat64(value)
 	return a
 }
 
 // AppendInt value to array
 func (a Array) AppendInt(value int64) (array Array) {
-	a.enc.AppendInt(value)
+	a.enc.AppendInt64(value)
 	return a
 }
 
 // AppendUint value to array
 func (a Array) AppendUint(value uint64) (array Array) {
-	a.enc.AppendUint(value)
+	a.enc.AppendUint64(value)
 	return a
 }
 

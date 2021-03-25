@@ -31,15 +31,12 @@ type Entry struct {
 	level Level
 }
 
-func (e Entry) reset() {
-	e.l = nil
-	e.o.enc.reset()
-}
-
 // Write logs the current entry. An entry must not be used after calling Write().
 func (e Entry) Write() {
 	if e.o.enc != nil {
-		e.o.enc.closeObject()
+		if !e.o.enc.text {
+			e.o.enc.closeObject()
+		}
 		e.l.write(e)
 	}
 }
@@ -64,26 +61,80 @@ func (e Entry) Bool(key string, value bool) (entry Entry) {
 	return e
 }
 
-// Float adds the given float key/value
-func (e Entry) Float(key string, value float64) (entry Entry) {
+// Float32 adds the given float32 key/value
+func (e Entry) Float32(key string, value float32) (entry Entry) {
+	e.Float64(key, float64(value))
+	return e
+}
+
+// Float64 adds the given float64 key/value
+func (e Entry) Float64(key string, value float64) (entry Entry) {
 	if e.o.enc != nil {
-		e.o.Float(key, value)
+		e.o.Float64(key, value)
 	}
+	return e
+}
+
+// Int8 adds the given int8 key/value
+func (e Entry) Int8(key string, value int8) (entry Entry) {
+	e.Int64(key, int64(value))
+	return e
+}
+
+// Int16 adds the given int16 key/value
+func (e Entry) Int16(key string, value int16) (entry Entry) {
+	e.Int64(key, int64(value))
+	return e
+}
+
+// Int32 adds the given int32 key/value
+func (e Entry) Int32(key string, value int32) (entry Entry) {
+	e.Int64(key, int64(value))
 	return e
 }
 
 // Int adds the given int key/value
-func (e Entry) Int(key string, value int64) (entry Entry) {
+func (e Entry) Int(key string, value int) (entry Entry) {
+	e.Int64(key, int64(value))
+	return e
+}
+
+// Int64 adds the given int64 key/value
+func (e Entry) Int64(key string, value int64) (entry Entry) {
 	if e.o.enc != nil {
-		e.o.Int(key, value)
+		e.o.Int64(key, value)
 	}
 	return e
 }
 
-// Uint adds the given uint key/value
-func (e Entry) Uint(key string, value uint64) (entry Entry) {
+// Uint8 adds the given uint8 key/value
+func (e Entry) Uint8(key string, value uint8) (entry Entry) {
+	e.Uint64(key, uint64(value))
+	return e
+}
+
+// Uint16 adds the given uint16 key/value
+func (e Entry) Uint16(key string, value uint16) (entry Entry) {
+	e.Uint64(key, uint64(value))
+	return e
+}
+
+// Uint32 adds the given uint32 key/value
+func (e Entry) Uint32(key string, value uint32) (entry Entry) {
+	e.Uint64(key, uint64(value))
+	return e
+}
+
+// Uint adds the given uint16 key/value
+func (e Entry) Uint(key string, value uint) (entry Entry) {
+	e.Uint64(key, uint64(value))
+	return e
+}
+
+// Uint64 adds the given uint key/value
+func (e Entry) Uint64(key string, value uint64) (entry Entry) {
 	if e.o.enc != nil {
-		e.o.Uint(key, value)
+		e.o.Uint64(key, value)
 	}
 	return e
 }
@@ -112,38 +163,21 @@ func (e Entry) Error(key string, value error) (entry Entry) {
 	return e
 }
 
-// Object creates a json object
-func (e Entry) Object(key string, fn func(Object)) (entry Entry) {
-	if e.o.enc != nil {
-		e.o.Object(key, fn)
-	}
-	return e
-}
-
-// Array creates a json array
-func (e Entry) Array(key string, fn func(Array)) (entry Entry) {
-	if e.o.enc != nil {
-		e.o.Array(key, fn)
-	}
-	return e
-}
-
 func (e Entry) init(level Level) {
 
 	t := time.Now()
 	e.level = level
 
-	e.o.enc.openObject()
 	if e.l.config.EnableTime {
 		e.o.enc.addKey(e.l.config.TimeField)
 
 		switch e.l.config.TimeFormat {
 		case Unix:
-			e.o.enc.AppendInt(t.Unix())
+			e.o.enc.AppendInt64(t.Unix())
 		case UnixMilli:
-			e.o.enc.AppendInt(t.UnixNano() / 1000000)
+			e.o.enc.AppendInt64(t.UnixNano() / int64(time.Millisecond))
 		case UnixNano:
-			e.o.enc.AppendInt(t.UnixNano())
+			e.o.enc.AppendInt64(t.UnixNano())
 		default:
 			e.o.enc.data = append(e.o.enc.data, '"')
 			e.o.enc.data = t.AppendFormat(e.o.enc.data, e.l.config.TimeFormat)
@@ -152,19 +186,17 @@ func (e Entry) init(level Level) {
 
 	}
 
-	e.o.enc.addKey("level")
-	e.o.enc.AppendString(level.String())
+	e.String(e.l.config.LevelField, level.String())
 
 	if e.l.config.EnableCaller {
 		_, f, l, ok := runtime.Caller(3 + e.l.config.CallerSkip)
-		e.o.enc.addKey("caller")
+
 		if ok {
 			idx := strings.LastIndexByte(f, '/')
 			idx = strings.LastIndexByte(f[:idx], '/')
-			e.o.enc.AppendString(f[idx+1:] + ":" + strconv.Itoa(l))
-		} else if !ok {
-			e.o.enc.AppendString("???")
+			e.String("caller", f[idx+1:]+":"+strconv.Itoa(l))
+		} else {
+			e.String("caller", "???")
 		}
-
 	}
 }

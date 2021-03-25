@@ -32,24 +32,24 @@ func (o Object) Bool(key string, value bool) (object Object) {
 	return o
 }
 
-// Float adds the given float key/value
-func (o Object) Float(key string, value float64) (object Object) {
+// Float64 adds the given float key/value
+func (o Object) Float64(key string, value float64) (object Object) {
 	o.enc.addKey(key)
-	o.enc.AppendFloat(value)
+	o.enc.AppendFloat64(value)
 	return o
 }
 
-// Int adds the given int key/value
-func (o Object) Int(key string, value int64) (object Object) {
+// Int64 adds the given int key/value
+func (o Object) Int64(key string, value int64) (object Object) {
 	o.enc.addKey(key)
-	o.enc.AppendInt(value)
+	o.enc.AppendInt64(value)
 	return o
 }
 
-// Uint adds the given uint key/value
-func (o Object) Uint(key string, value uint64) (object Object) {
+// Uint64 adds the given uint key/value
+func (o Object) Uint64(key string, value uint64) (object Object) {
 	o.enc.addKey(key)
-	o.enc.AppendUint(value)
+	o.enc.AppendUint64(value)
 	return o
 }
 
@@ -69,33 +69,9 @@ func (o Object) Null(key string) (object Object) {
 
 // Error adds a error value for the given key
 func (o Object) Error(key string, err error) (object Object) {
-	o.enc.addKey(key)
-
-	var s string
-	if err != nil {
-		s = err.Error()
+	if err == nil {
+		return o.Null(key)
 	}
-	o.enc.AppendString(s)
 
-	return o
-}
-
-// Object creates a json object
-func (o Object) Object(key string, fn func(Object)) (object Object) {
-	o.enc.addKey(key)
-	o.enc.openObject()
-	fn(o)
-	o.enc.closeObject()
-	return o
-}
-
-// Array creates a json array
-func (o Object) Array(key string, fn func(Array)) (object Object) {
-	var a Array
-	o.enc.addKey(key)
-	o.enc.openArray()
-	a.enc = o.enc
-	fn(a)
-	o.enc.closeArray()
-	return o
+	return o.String(key, err.Error())
 }

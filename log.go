@@ -43,6 +43,7 @@ var (
 
 	// DefaultConfig for logger
 	DefaultConfig = Config{
+		Text:           false,
 		Level:          INFO,
 		EnableCaller:   true,
 		CallerSkip:     0,
@@ -50,6 +51,7 @@ var (
 		TimeField:      "time",
 		TimeFormat:     ISO8601,
 		MessageField:   "message",
+		LevelField:     "level",
 		EnableSampling: true,
 		SamplingTick:   time.Second,
 		SamplingStart:  100,
@@ -73,6 +75,7 @@ func newEncoder() interface{} {
 
 // Config type for logger
 type Config struct {
+	Text           bool
 	Level          Level         // Log level
 	EnableCaller   bool          // Enable caller info
 	CallerSkip     int           // Skip level of callers, useful if wrapping the logger
@@ -80,7 +83,8 @@ type Config struct {
 	TimeField      string        // Field name for the log timestamp
 	TimeFormat     string        // Time Format for log timestamp
 	MessageField   string        // Field name for the log message
-	EnableSampling bool          // Enable log sampling to cap CPU and I/O load
+	LevelField     string        // Field name for the log level
+	EnableSampling bool          // Enable log sampling to reduce CPU and I/O load
 	SamplingTick   time.Duration // Resolution at which entries will be sampled
 	SamplingStart  int           // Start sampling after this number of similar entries within SamplingTick
 	SamplingFactor int           // Reduction factor when sampling
@@ -122,10 +126,11 @@ func New(writer io.Writer, config Config) (logger *Logger) {
 // With functions are cumulative and applied before all other log data.
 func (l *Logger) With(f ...func(Entry)) (logger *Logger) {
 	return &Logger{
-		config: l.config,
-		writer: l.writer,
-		hooks:  l.hooks,
-		with:   append(l.with, f...),
+		config:  l.config,
+		writer:  l.writer,
+		hooks:   l.hooks,
+		sampler: l.sampler,
+		with:    append(l.with, f...),
 	}
 }
 
@@ -153,6 +158,10 @@ func (l *Logger) entry(level Level, message string) (entry Entry) {
 		}
 
 		entry.o.enc = encoderPool.Get().(*encoder)
+		if l.config.Text {
+			entry.o.enc.text = true
+		}
+
 		entry.l = l
 		entry.init(level)
 
@@ -198,9 +207,7 @@ func (l *Logger) Fatal(message string) (entry Entry) {
 }
 
 func (l *Logger) write(entry Entry) {
-	if entry.level == FATAL {
-		defer os.Exit(1)
-	}
+	defer l.discard(entry)
 
 	if entry.o.enc == nil {
 		return
@@ -211,11 +218,17 @@ func (l *Logger) write(entry Entry) {
 	for i := 0; i < len(l.hooks); i++ {
 		l.hooks[i](entry)
 	}
-
-	l.discard(entry)
 }
 
 func (l *Logger) discard(entry Entry) {
+	for i := 0; i < len(l.hooks); i++ {
+		l.hooks[i](entry)
+	}
+
+	if entry.level == FATAL {
+		os.Exit(1)
+	}
+
 	entry.o.enc.reset()
 	encoderPool.Put(entry.o.enc)
 }

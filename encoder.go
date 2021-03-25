@@ -1,6 +1,8 @@
 package log
 
-import "strconv"
+import (
+	"strconv"
+)
 
 /*
    Copyright 2019 Bruno Moura <brunotm@gmail.com>
@@ -23,24 +25,37 @@ const (
 )
 
 type encoder struct {
+	text bool
 	data []byte
 }
 
 func (e *encoder) checkComma() {
 	if len(e.data) > 0 {
-
-		switch e.data[len(e.data)-1] {
-		case '{', '[', ':':
-			return
-		default:
-			e.data = append(e.data, ',')
+		if !e.text {
+			switch e.data[len(e.data)-1] {
+			case '{', '[', ':':
+				return
+			default:
+				e.data = append(e.data, ',', ' ')
+				return
+			}
+		} else {
+			switch e.data[len(e.data)-1] {
+			case '=', '[', '{':
+				return
+			default:
+				e.data = append(e.data, ' ')
+				return
+			}
 		}
+	}
 
+	if !e.text {
+		e.openObject()
 	}
 }
 
 func (e *encoder) openObject() {
-	e.checkComma()
 	e.data = append(e.data, '{')
 }
 
@@ -66,17 +81,17 @@ func (e *encoder) AppendBool(value bool) {
 	e.data = strconv.AppendBool(e.data, value)
 }
 
-func (e *encoder) AppendFloat(value float64) {
+func (e *encoder) AppendFloat64(value float64) {
 	e.checkComma()
 	e.data = strconv.AppendFloat(e.data, value, 'f', -1, 64)
 }
 
-func (e *encoder) AppendInt(value int64) {
+func (e *encoder) AppendInt64(value int64) {
 	e.checkComma()
 	e.data = strconv.AppendInt(e.data, value, 10)
 }
 
-func (e *encoder) AppendUint(value uint64) {
+func (e *encoder) AppendUint64(value uint64) {
 	e.checkComma()
 	e.data = strconv.AppendUint(e.data, value, 10)
 }
@@ -126,7 +141,13 @@ func (e *encoder) writeString(s string) {
 
 func (e *encoder) addKey(key string) {
 	e.checkComma()
-	e.data = append(e.data, '"')
-	e.data = append(e.data, key...)
-	e.data = append(e.data, '"', ':')
+
+	if !e.text {
+		e.data = append(e.data, '"')
+		e.data = append(e.data, key...)
+		e.data = append(e.data, '"', ':')
+	} else {
+		e.data = append(e.data, key...)
+		e.data = append(e.data, '=')
+	}
 }
