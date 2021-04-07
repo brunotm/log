@@ -34,7 +34,7 @@ type Entry struct {
 // Write logs the current entry. An entry must not be used after calling Write().
 func (e Entry) Write() {
 	if e.o.enc != nil {
-		if !e.o.enc.text {
+		if e.o.enc.format == FormatJSON {
 			e.o.enc.closeObject()
 		}
 		e.l.write(e)
