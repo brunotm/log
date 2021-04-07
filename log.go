@@ -22,10 +22,20 @@ import (
 	"io/ioutil"
 	"os"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
+// Format is the logging format
+type Format uint32
+
 const (
+	// FormatJSON tells the logger to write json structured messages
+	FormatJSON Format = 0
+
+	// FormatText tells the logger to write text structured key=value pairs messages
+	FormatText Format = 1
+
 	// ISO8601 time format
 	ISO8601 = "2006-01-02T15:04:05.000Z0700"
 	// Unix time in seconds
@@ -43,7 +53,7 @@ var (
 
 	// DefaultConfig for logger
 	DefaultConfig = Config{
-		Text:           false,
+		Format:         FormatJSON,
 		Level:          INFO,
 		EnableCaller:   true,
 		CallerSkip:     0,
@@ -75,7 +85,7 @@ func newEncoder() interface{} {
 
 // Config type for logger
 type Config struct {
-	Text           bool
+	Format         Format        // Log format
 	Level          Level         // Log level
 	EnableCaller   bool          // Enable caller info
 	CallerSkip     int           // Skip level of callers, useful if wrapping the logger
@@ -92,7 +102,7 @@ type Config struct {
 
 // Logger type
 type Logger struct {
-	config  Config
+	config  *Config
 	writer  io.Writer
 	hooks   []func(Entry)
 	with    []func(Entry)
@@ -117,12 +127,22 @@ func New(writer io.Writer, config Config) (logger *Logger) {
 	}
 
 	logger.writer = writer
-	logger.config = config
+	logger.config = &config
 
 	return logger
 }
 
-// With register functions to apply context to the log entries.
+// SetLevel atomically sets the new log level
+func (l *Logger) SetLevel(lv Level) {
+	atomic.StoreUint32((*uint32)(&l.config.Level), uint32(lv))
+}
+
+// SetFormat atomically sets the new log format
+func (l *Logger) SetFormat(f Format) {
+	atomic.StoreUint32((*uint32)(&l.config.Format), uint32(f))
+}
+
+// With creates a new logger with functions to apply context to the log entries.
 // With functions are cumulative and applied before all other log data.
 func (l *Logger) With(f ...func(Entry)) (logger *Logger) {
 	return &Logger{
@@ -134,15 +154,15 @@ func (l *Logger) With(f ...func(Entry)) (logger *Logger) {
 	}
 }
 
-// Hooks register functions to the current logger that are applied
-// after the entry is written. Hooks are cumulative and useful for
-// sending log data to log aggregation tools or capturing metrics.
+// Hooks creates a new logger with functions to apply after the entry is written.
+// Hooks are cumulative and useful for shipping log data to other systems.
 func (l *Logger) Hooks(f ...func(Entry)) (logger *Logger) {
 	return &Logger{
-		config: l.config,
-		writer: l.writer,
-		hooks:  append(l.hooks, f...),
-		with:   l.with,
+		config:  l.config,
+		writer:  l.writer,
+		hooks:   append(l.hooks, f...),
+		with:    l.with,
+		sampler: l.sampler,
 	}
 }
 
@@ -151,16 +171,14 @@ func (l *Logger) entry(level Level, message string) (entry Entry) {
 	entry.level = level
 
 	// Only initialize Entry if on or above the logger Level
-	if entry.level >= l.config.Level {
+	if entry.level >= Level(atomic.LoadUint32((*uint32)(&l.config.Level))) {
 
 		if l.config.EnableSampling && !l.sampler.check(level, message) {
 			return entry
 		}
 
 		entry.o.enc = encoderPool.Get().(*encoder)
-		if l.config.Text {
-			entry.o.enc.text = true
-		}
+		entry.o.enc.format = Format(atomic.LoadUint32((*uint32)(&l.config.Format)))
 
 		entry.l = l
 		entry.init(level)
@@ -207,17 +225,12 @@ func (l *Logger) Fatal(message string) (entry Entry) {
 }
 
 func (l *Logger) write(entry Entry) {
-	defer l.discard(entry)
-
 	if entry.o.enc == nil {
 		return
 	}
 
+	defer l.discard(entry)
 	l.writer.Write(append(entry.o.enc.data, '\n'))
-
-	for i := 0; i < len(l.hooks); i++ {
-		l.hooks[i](entry)
-	}
 }
 
 func (l *Logger) discard(entry Entry) {
