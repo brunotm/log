@@ -25,13 +25,13 @@ const (
 )
 
 type encoder struct {
-	text bool
-	data []byte
+	format Format
+	data   []byte
 }
 
 func (e *encoder) checkComma() {
 	if len(e.data) > 0 {
-		if !e.text {
+		if e.format == FormatJSON {
 			switch e.data[len(e.data)-1] {
 			case '{', '[', ':':
 				return
@@ -50,7 +50,7 @@ func (e *encoder) checkComma() {
 		}
 	}
 
-	if !e.text {
+	if e.format == FormatJSON {
 		e.openObject()
 	}
 }
@@ -142,7 +142,7 @@ func (e *encoder) writeString(s string) {
 func (e *encoder) addKey(key string) {
 	e.checkComma()
 
-	if !e.text {
+	if e.format == FormatJSON {
 		e.data = append(e.data, '"')
 		e.data = append(e.data, key...)
 		e.data = append(e.data, '"', ':')
