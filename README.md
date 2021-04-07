@@ -14,6 +14,25 @@ This behavior can be disabled by setting `Config.EnableSampling to false`
 
 ## Usage
 
+### Default package logger
+
+```go
+import (
+    "github.com/brunotm/log"
+)
+
+func main() {
+    // Simple logging
+    log.Info("info message").String("key", "value").Write()
+    // Text format:
+    // time="2021-03-25T13:32:50.391Z" level="info" caller="_local/main.go:26" app="app1" message="info message" key="value"
+    // JSON format:
+    // {"time":"2021-03-25T13:33:20.547Z", "level":"info", "caller":"_local/main.go:26", "app":"app1", "message":"info message", "key":"value"}
+}
+```
+
+### New customized logger
+
 ```go
 package main
 
@@ -26,7 +45,7 @@ import (
 func main() {
     config := DefaultConfig
     config.Level = DEBUG
-    config.Text = true  // Enable text logging
+    config.Format = FormatText // Enable text logging
 
     // New logger with added context
     l := New(os.Stdout, config).
