@@ -29,27 +29,27 @@ func TestLogEntry(t *testing.T) {
 	config.EnableTime = false
 	config.EnableCaller = false
 	config.Level = DEBUG
-	l := New(os.Stdout, config)
+	l := New(nil, config)
 
-	l.Hooks(func(e Entry) {
+	l = l.Hooks(func(e Entry) {
 		switch e.Level() {
 		case DEBUG:
-			w := []byte(`{"level":"debug","message":"debug message","string value":"text","int value":8,"null":null,"error":"new error",}`)
+			w := []byte(`{"level":"debug", "message":"debug message", "string value":"text", "int value":8, "null value":null, "error":"new error"}`)
 			if !bytes.Equal(w, e.Bytes()) {
-				t.Fatal("error logging warn")
+				t.Fatal("error logging debug")
 			}
 		case INFO:
-			w := []byte(`{"level":"info","message":"info message","string value":"text","int value":8,"null value":null,"error":"new error",}`)
+			w := []byte(`{"level":"info", "message":"info message", "string value":"text", "int value":8, "null value":null, "error":"new error"}`)
 			if !bytes.Equal(w, e.Bytes()) {
 				t.Fatal("error logging info")
 			}
 		case WARN:
-			w := []byte(`{"level":"warn","message":"warn message","string value":"text","int value":8,"null value":null,"error":"new error",}`)
+			w := []byte(`{"level":"warn", "message":"warn message", "string value":"text", "int value":8, "null value":null, "error":"new error"}`)
 			if !bytes.Equal(w, e.Bytes()) {
 				t.Fatal("error logging warn")
 			}
 		case ERROR:
-			w := []byte(`{"level":"error","message":"error message","string value":"text","int value":8,"null value":null,"error":"new error",}`)
+			w := []byte(`{"level":"error", "message":"error message", "string value":"text", "int value":8, "null value":null, "error":"new error"}`)
 			if !bytes.Equal(w, e.Bytes()) {
 				t.Fatal("error logging error")
 			}
@@ -75,7 +75,95 @@ func TestLogEntry(t *testing.T) {
 		String("string value", "text").
 		Int("int value", 8).Null("null value").
 		Error("error", errors.New("new error")).Write()
+}
 
+func TestLogSetFormat(t *testing.T) {
+	config := DefaultConfig
+	config.EnableTime = false
+	config.EnableCaller = false
+	config.Level = DEBUG
+	l := New(nil, config)
+
+	jsonCount := 0
+	textCount := 0
+
+	l = l.Hooks(func(e Entry) {
+		switch e.o.enc.format {
+		case FormatJSON:
+			jsonCount++
+		case FormatText:
+			textCount++
+		}
+	})
+
+	l.Debug("debug message").
+		String("string value", "text").
+		Int("int value", 8).Null("null value").
+		Error("error", errors.New("new error")).Write()
+
+	l.SetFormat(FormatText)
+
+	l.Info("info message").
+		String("string value", "text").
+		Int("int value", 8).Null("null value").
+		Error("error", errors.New("new error")).Write()
+
+	l.SetFormat(FormatJSON)
+
+	l.Info("info message").
+		String("string value", "text").
+		Int("int value", 8).Null("null value").
+		Error("error", errors.New("new error")).Write()
+
+	if jsonCount != 2 || textCount != 1 {
+		t.Error("invalid count for each format")
+	}
+}
+
+func TestLogSetLevel(t *testing.T) {
+	config := DefaultConfig
+	config.EnableTime = false
+	config.EnableCaller = false
+	l := New(nil, config)
+
+	infoCount := 0
+	debugCount := 0
+
+	l = l.Hooks(func(e Entry) {
+		switch e.Level() {
+		case INFO:
+			infoCount++
+		case DEBUG:
+			debugCount++
+		}
+	})
+
+	l.SetLevel(INFO)
+	l.Debug("debug message").
+		String("string value", "text").
+		Int("int value", 8).Null("null value").
+		Error("error", errors.New("new error")).Write()
+
+	l.SetLevel(DEBUG)
+	l.Debug("debug message").
+		String("string value", "text").
+		Int("int value", 8).Null("null value").
+		Error("error", errors.New("new error")).Write()
+
+	l.Info("info message").
+		String("string value", "text").
+		Int("int value", 8).Null("null value").
+		Error("error", errors.New("new error")).Write()
+
+	l.SetLevel(ERROR)
+	l.Info("info message").
+		String("string value", "text").
+		Int("int value", 8).Null("null value").
+		Error("error", errors.New("new error")).Write()
+
+	if infoCount != 1 || debugCount != 1 {
+		t.Error("invalid count for level", infoCount, debugCount)
+	}
 }
 
 func TestLogText(t *testing.T) {
@@ -83,8 +171,8 @@ func TestLogText(t *testing.T) {
 	config.EnableTime = false
 	config.EnableCaller = false
 	config.Level = DEBUG
-	config.Text = true
-	l := New(os.Stdout, config)
+	config.Format = FormatText
+	l := New(nil, config)
 
 	l.Hooks(func(e Entry) {
 		w := []byte(`level="debug" message="debug message" string="text" int=8 null=null error="new error"`)
@@ -171,7 +259,7 @@ func BenchmarkLogNoLevel(b *testing.B) {
 func Example() {
 	config := DefaultConfig
 	config.Level = DEBUG
-	config.Text = true // Enable text logging
+	config.Format = FormatText // Enable text logging
 
 	// New logger with added context
 	l := New(os.Stdout, config).
