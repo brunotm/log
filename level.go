@@ -23,7 +23,7 @@ import (
 */
 
 // Level represents the supported log levels
-type Level uint8
+type Level uint32
 
 const (
 	// DEBUG log level
