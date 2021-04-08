@@ -1,7 +1,6 @@
 package log
 
 import (
-	"bufio"
 	"os"
 )
 
@@ -10,7 +9,7 @@ var logger *Logger
 func init() {
 	config := DefaultConfig
 	config.CallerSkip++
-	logger = New(bufio.NewWriter(os.Stderr), DefaultConfig)
+	logger = New(os.Stderr, config)
 }
 
 // SetFormat sets the logging format for the default package logger
