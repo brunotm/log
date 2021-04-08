@@ -26,16 +26,7 @@ import (
 	"time"
 )
 
-// Format is the logging format
-type Format uint32
-
 const (
-	// FormatJSON tells the logger to write json structured messages
-	FormatJSON Format = 0
-
-	// FormatText tells the logger to write text structured key=value pairs messages
-	FormatText Format = 1
-
 	// ISO8601 time format
 	ISO8601 = "2006-01-02T15:04:05.000Z0700"
 	// Unix time in seconds
