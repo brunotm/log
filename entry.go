@@ -17,6 +17,7 @@ package log
 */
 
 import (
+	"fmt"
 	"runtime"
 	"strconv"
 	"strings"
@@ -159,6 +160,16 @@ func (e Entry) Null(key string) (entry Entry) {
 func (e Entry) Error(key string, value error) (entry Entry) {
 	if e.o.enc != nil {
 		e.o.Error(key, value)
+	}
+	return e
+}
+
+// Printf parses the format and args adding it as a key/string value in the log entry.
+// This method is helpful to avoid allocations and extra work when logging with a lower
+// log level than the logger is working with.
+func (e Entry) Printf(key, format string, args ...interface{}) (entry Entry) {
+	if e.o.enc != nil {
+		e.o.String(key, fmt.Sprintf(format, args...))
 	}
 	return e
 }
