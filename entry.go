@@ -164,6 +164,22 @@ func (e Entry) Error(key string, value error) (entry Entry) {
 	return e
 }
 
+// Time adds the given time key/value as an ISO8601 string
+func (e Entry) Time(key string, value time.Time) (entry Entry) {
+	if e.o.enc != nil {
+		e.o.String(key, value.Format(time.RFC3339))
+	}
+	return e
+}
+
+// Duration adds the given duration key/value as a string
+func (e Entry) Duration(key string, value time.Duration) (entry Entry) {
+	if e.o.enc != nil {
+		e.o.String(key, value.String())
+	}
+	return e
+}
+
 // Printf parses the format and args adding it as a key/string value in the log entry.
 // This method is helpful to avoid allocations and extra work when logging with a lower
 // log level than the logger is working with.
