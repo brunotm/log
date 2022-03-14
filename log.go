@@ -28,7 +28,7 @@ import (
 
 const (
 	// ISO8601 time format
-	ISO8601 = "2006-01-02T15:04:05.000Z0700"
+	ISO8601 = "2006-01-02T15:04:05.999Z07:00"
 	// Unix time in seconds
 	Unix = "unix"
 	// UnixMilli time in milliseconds
